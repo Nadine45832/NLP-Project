@@ -29,17 +29,28 @@ def check_basic_data(df: pd.DataFrame):
     print("\nfirst 3 rows:\n", df.head(3))
 
     # print the shape of the dataframe
-    print("\nshape of the dataframe:\n", df.shape)
+    print("\nshape of the dataframe: ", df.shape)
 
     # print the column names
     # print the column types
     # print the missing values per column
     print(df.info())
-    print("\nthe missing values per column:", df.isnull().sum(axis=0))
+    print("\nthe missing values per column:\n", df.isnull().sum(axis=0))
 
     # print the unique values for all columns
     for cl_name in df.columns:
         print(f"unique values for '{cl_name}' column:", len(df[cl_name].unique()))
+
+    # check the comments that are not unique
+    comments_dict = {}
+    for comment in df["CONTENT"]:
+        if comment not in comments_dict:
+            comments_dict[comment] = 0
+        comments_dict[comment] += 1
+
+    pairs = comments_dict.items()
+    ordered_comments = sorted(pairs, key=lambda k: k[1], reverse=True)
+    print(*ordered_comments[:10], sep="\n")
 
 
 def clear_comments(comments):
@@ -90,12 +101,14 @@ def pre_precess(df: pd.DataFrame):
         errors="ignore",
     )
 
-    print("\nshape of the dataframe:\n", df.shape)
+    # Remove duplicated comments
+    df.drop_duplicates(ignore_index=True, inplace=True)
 
     # iterate over each comment, clear it and convert it to list of tokens
     df['preprocessed_comments'] = clear_comments(df['CONTENT'])
 
-    print("\nfirst 5 rows:\n", df["preprocessed_comments"].head(5))
+    print("\nshape of the dataframe: ", df.shape)
+    print("\nfirst 5 rows:\n", df.head(5))
 
     return df
 
@@ -108,7 +121,7 @@ def vectorize_tokens(df: pd.DataFrame):
     bw_vectorized = bw_vectorizer.fit_transform(documents)
 
     # print information about vectorized dataframe
-    print("\nshape of the vectorized dataframe:\n", bw_vectorized.shape)
+    print("\nshape of the vectorized dataframe: ", bw_vectorized.shape)
     bw_features = bw_vectorizer.get_feature_names_out()
     print("\nList of words:\n", bw_features)
     print(bw_vectorized.toarray())
@@ -121,7 +134,7 @@ def vectorize_tokens(df: pd.DataFrame):
     tfidf_vectorized = tfidf_vectorizer.fit_transform(documents)
 
     # print information about vectorized dataframe
-    print("\nshape of the vectorized dataframe:\n", tfidf_vectorized.shape)
+    print("\nshape of the vectorized dataframe: ", tfidf_vectorized.shape)
     tfidf_features = tfidf_vectorizer.get_feature_names_out()
     print("\nList of words:\n", tfidf_features)
     print(tfidf_vectorized.toarray())
@@ -204,11 +217,11 @@ def main():
         "I love Shakira, the sound is really good",
         "This clip is amaizing, video is really perfect. Waka Waka Waka)))))))",
         "the song is nice, but nothing special, have you heard Eminem",
-        "I love Tailor Swift more"
+        "I like Tailor Swift better"
     ])
     spam_comments = pd.Series([
         "Click a link to earn bitcoin, https://earn-bitcoin.com",
-        "This is not a spam, do you earn some money, this is my facebook page"
+        "This is definitely not a spam! Do you want to earn some money, this is my facebook page"
     ])
     combined = pd.concat([non_spam_comments, spam_comments])
     predictions = model.predict(tfidf_vectorizer.transform(clear_comments(combined)))
